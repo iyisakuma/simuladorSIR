@@ -4,7 +4,7 @@
 #include <mpi.h>
 #include <omp.h>
 
-#define N 1000           // Número total de indivíduos
+#define N 10000           // Número total de indivíduos
 #define STEPS 100        // Número de iterações
 #define DIST_MAX 0.02    // Distância máxima para contágio
 #define BETA 0.3         // Taxa de infecção
@@ -23,7 +23,7 @@ void inicializar_populacao(Pessoa *p, int n) {
     for (int i = 0; i < n; i++) {
         p[i].x = (double) rand() / RAND_MAX;
         p[i].y = (double) rand() / RAND_MAX;
-        p[i].status = (rand() % 100 < 5) ? INFECTADO : SUSCETIVEL; // 5% começam infectados
+        p[i].status = (rand() % 100 < 10) ? INFECTADO : SUSCETIVEL; // 10% começam infectados
     }
 }
 
