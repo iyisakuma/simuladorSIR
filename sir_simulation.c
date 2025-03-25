@@ -4,14 +4,20 @@
 #include <mpi.h>
 #include <omp.h>
 
-#define N 100000000          // Número total de indivíduos
-#define STEPS 100        // Número de iterações
-#define DIST_MAX 0.02    // Distância máxima para contágio
-#define BETA 0.3         // Taxa de infecção
-#define GAMMA 0.1        // Taxa de recuperação
-#define INFECTADO 1
-#define SUSCETIVEL 0
-#define RECUPERA 2
+#define N 10000         // Número total de indivíduos
+#define STEPS 100       // Número de iterações
+#define DIST_MAX 0.02   // Distância máxima para contágio
+#define BETA 0.3        // Taxa de infecção
+#define GAMMA 0.1       // Taxa de recuperação
+#define INFECTADO 1     // Status de indivíduo infectado
+#define SUSCETIVEL 0    // Status de indivíduo suscetível
+#define RECUPERA 2      // Status de indivíduo recuperado
+
+/**
+ * Estrutura que representa um indivíduo da população.
+ * Cada indivíduo possui uma posição (x, y) 
+ * E um status: suscetível, infectado ou recuperado.
+ */
 typedef struct {
     double x, y;
     int status; 
@@ -26,6 +32,7 @@ typedef struct {
  * @param n o tamanho do vetor de pessoas
  */
 void inicializar_populacao(Pessoa *p, int n) {
+    printf("Inicializando população:\n");
     for (int i = 0; i < n; i++) {
         p[i].x = (double) rand() / RAND_MAX;
         p[i].y = (double) rand() / RAND_MAX;
@@ -123,13 +130,13 @@ void exibir_estatisticas(Pessoa *pop_global, int n) {
 int main(int argc, char **argv) {
     int rank, size;
     MPI_Init(&argc, &argv);         
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank); // Retorna o identificador do processo atual (rank)
+    MPI_Comm_size(MPI_COMM_WORLD, &size); // Retorna o número total de processos em execução
 
     // Criar tipo MPI para Pessoa
-    MPI_Datatype MPI_PESSOA;
-    int block_lengths[2] = {2, 1};  // Dois doubles (x, y) e um int (status)
-    MPI_Aint offsets[2];
+    MPI_Datatype MPI_PESSOA;        // Pessoa é decomposta em dois blocos
+    int block_lengths[2] = {2, 1};  // Bloco 1: Dois doubles (x, y) - Bloco 2: um int (status)
+    MPI_Aint offsets[2];            // Offset dos blocos em relação ao início da struct
     offsets[0] = offsetof(Pessoa, x);
     offsets[1] = offsetof(Pessoa, status);
     MPI_Datatype types[2] = {MPI_DOUBLE, MPI_INT};
@@ -150,23 +157,27 @@ int main(int argc, char **argv) {
         }
         // Inicializar população global
         inicializar_populacao(pop_global, N);
+        exibir_estatisticas(pop_global, N);
     }
 
-    // Distribuir os dados corretamente
-    MPI_Scatter(pop_global, n_local, MPI_PESSOA, 
-                p_local, n_local, MPI_PESSOA, 
-                0, MPI_COMM_WORLD);
+    // Distribuir a população global entre os ranks
+    MPI_Scatter(
+        pop_global, n_local, MPI_PESSOA,  // Variaveis que enviam
+        p_local,    n_local, MPI_PESSOA,  // Variaveis que recebem
+        0, MPI_COMM_WORLD                 // Rank de partida
+    );
 
     for (int t = 0; t < STEPS; t++) {
         // Atualizar estado dos indivíduos em cada rank
         atualizar_estado(p_local, n_local);
         // Aguardar que todos os ranks tenham concluído a atualização
         MPI_Barrier(MPI_COMM_WORLD);
-        
         // O rank 0 recebe os dados de volta
-        MPI_Gather(p_local, n_local, MPI_PESSOA, 
-                   pop_global, n_local, MPI_PESSOA, 
-                   0, MPI_COMM_WORLD);
+        MPI_Gather(
+            p_local, n_local, MPI_PESSOA,       // Variaveis que enviam 
+            pop_global, n_local, MPI_PESSOA,    // Variaveis que recebem
+            0, MPI_COMM_WORLD                  // Rank de destino
+        );
 
         if (rank == 0) {
             // Exibir estatísticas sobre o estado da população
