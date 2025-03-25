@@ -4,14 +4,20 @@
 #include <mpi.h>
 #include <omp.h>
 
-#define N 100000000          // Número total de indivíduos
-#define STEPS 100        // Número de iterações
-#define DIST_MAX 0.02    // Distância máxima para contágio
-#define BETA 0.3         // Taxa de infecção
-#define GAMMA 0.1        // Taxa de recuperação
-#define INFECTADO 1
-#define SUSCETIVEL 0
-#define RECUPERA 2
+#define N 10000         // Número total de indivíduos
+#define STEPS 100       // Número de iterações
+#define DIST_MAX 0.02   // Distância máxima para contágio
+#define BETA 0.3        // Taxa de infecção
+#define GAMMA 0.1       // Taxa de recuperação
+#define INFECTADO 1     // Status de indivíduo infectado
+#define SUSCETIVEL 0    // Status de indivíduo suscetível
+#define RECUPERA 2      // Status de indivíduo recuperado
+
+/**
+ * Estrutura que representa um indivíduo da população.
+ * Cada indivíduo possui uma posição (x, y) 
+ * E um status: suscetível, infectado ou recuperado.
+ */
 typedef struct {
     double x, y;
     int status; 
@@ -26,6 +32,7 @@ typedef struct {
  * @param n o tamanho do vetor de pessoas
  */
 void inicializar_populacao(Pessoa *p, int n) {
+    printf("Inicializando população:\n");
     for (int i = 0; i < n; i++) {
         p[i].x = (double) rand() / RAND_MAX;
         p[i].y = (double) rand() / RAND_MAX;
@@ -150,6 +157,7 @@ int main(int argc, char **argv) {
         }
         // Inicializar população global
         inicializar_populacao(pop_global, N);
+        exibir_estatisticas(pop_global, N);
     }
 
     // Distribuir os dados corretamente
